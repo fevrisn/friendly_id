@@ -13,6 +13,13 @@ class Slug < ::ActiveRecord::Base
       :order => "sequence ASC"
     }
   }
+  scope :unscoped_similar_to, lambda {|slug| {:conditions => {
+        :name           => slug.name,
+        :sluggable_type => slug.sluggable_type
+      },
+      :order => "unscoped_sequence ASC"
+    }
+  }
 
   def sluggable
     sluggable_id && !@sluggable and begin
@@ -68,8 +75,16 @@ class Slug < ::ActiveRecord::Base
     !similar_slugs.empty?
   end
 
+  def unscoped_similar_to_other_slugs?
+    !unscoped_similar_slugs.empty?
+  end
+
   def similar_slugs
     self.class.similar_to(self)
+  end
+
+  def unscoped_similar_slugs
+    self.class.unscoped_similar_to(self)
   end
 
   def separator
@@ -78,6 +93,7 @@ class Slug < ::ActiveRecord::Base
 
   def set_sequence
     return unless new_record?
+    self.unscoped_sequence = unscoped_similar_slugs.last.unscoped_sequence.succ if unscoped_similar_to_other_slugs?
     self.sequence = similar_slugs.last.sequence.succ if similar_to_other_slugs?
   end
 
