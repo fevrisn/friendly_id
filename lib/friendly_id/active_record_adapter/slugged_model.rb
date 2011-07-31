@@ -11,13 +11,19 @@ module FriendlyId
           after_update :update_scope
           after_update :update_dependent_scopes
           protect_friendly_id_attributes
+
+          def self.find_unscoped id
+            name, sequence = id.to_s.parse_friendly_id
+            slug = Slug.where("sluggable_type = ? and name = ? and unscoped_sequence = ?", self.name, name, sequence).first
+            (slug && slug.sluggable) or self.find(id)
+          end
         end
       end
 
       include FriendlyId::Slugged::Model
 
       def find_slug(name, sequence)
-        slugs.where("name = ? and (sequence = ? or unscoped_sequence = ?)", name, sequence, sequence).first
+        slugs.find_by_name_and_sequence(name, sequence)
       end
 
       # Returns the friendly id, or if none is available, the numeric id. Note that this
